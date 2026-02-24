@@ -2,7 +2,12 @@
   "name": "user-flow-engine",
   "version": "1.0.0",
   "description": "An Engine for Customizable Scenarios",
-  "keywords": ["flows", "scenarios", "customizable flows", "customizable scenarios"],
+  "keywords": [
+    "flows",
+    "scenarios",
+    "customizable flows",
+    "customizable scenarios"
+  ],
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
