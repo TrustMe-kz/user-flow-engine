@@ -21,6 +21,8 @@ export type Inarr<T extends any, A extends any[]> = T extends A[any] ? true : fa
 
 export type MaybePromise<T extends any = any> = T | Promise<T>;
 
+export type Constructor<T extends any = object> = new (...args: any[]) => T;
+
 
 // Base Interfaces
 
@@ -43,7 +45,7 @@ export interface FlowControllerInterface {
 
 export interface FlowInterface {
     short: FlowShort,
-    abstract: boolean,
+    abstract: FlowShort,
     steps: StepInterface[],
     handle: FlowHandler,
 }

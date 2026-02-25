@@ -9,6 +9,8 @@ export type StepOrShort = types.StepInterface | types.StepShort;
 
 export type StepOrOptions = types.StepInterface | types.AddStepOptions;
 
+export type FlowOrConstructor = types.FlowInterface | types.Constructor<types.FlowInterface>;
+
 
 // Constants
 
@@ -28,7 +30,7 @@ export class FlowStep implements types.StepInterface {
         if (handler) this.handleFunc = handler;
     }
 
-    setShort(val: string): this {
+    setShort(val: types.StepShort): this {
         this.short = val;
         return this;
     }
@@ -92,14 +94,17 @@ export class FlowController implements types.FlowControllerInterface {
     }
 
     public getStepIndexByShort(val: types.StepShort): number|null {
-        return this.steps?.findIndex(s => s?.short === val);
+        const index = this.steps?.findIndex(s => s?.short === val);
+        return index >= 0 ? index : null;
     }
 
     public getStepIndex(val: StepOrShort): number|null {
-        if (isObject(val) && (val as types.StepInterface)?.short)
-            return this.steps?.findIndex(s => s?.short === (val as types.StepInterface)?.short) ?? null;
-        else
-            return this.getStepIndexByShort(val as types.StepShort);
+        if (isObject(val) && (val as types.StepInterface)?.short) {
+            const index = this.steps?.findIndex(s => s?.short === (val as types.StepInterface)?.short);
+            return index >= 0 ? index : null;
+        }
+
+        return this.getStepIndexByShort(val as types.StepShort);
     }
 
     public getStep(val: StepOrShort): types.StepInterface | null {
@@ -204,16 +209,16 @@ export class FlowController implements types.FlowControllerInterface {
 }
 
 export class BaseFlow implements types.FlowInterface {
-    public short: string = 'baseFlow';
-    public abstract: boolean = true;
+    public short: string;
+    public abstract: string = 'baseFlow';
     public steps: types.StepInterface[] = [];
 
-    setShort(val: string): this {
+    setShort(val: types.FlowShort): this {
         this.short = val;
         return this;
     }
 
-    setAbstract(val: boolean): this {
+    setAbstract(val: types.FlowShort): this {
         this.abstract = val;
         return this;
     }
@@ -224,10 +229,21 @@ export class BaseFlow implements types.FlowInterface {
     }
 
     public addStep(val: StepOrOptions, _default?: boolean|null): this {
+
+        // Getting the step
+
+        const step = ensureStep(val);
+
+        step.handle = step.handle.bind(this);
+
+
+        // Adding the step
+
         if (_default)
             this.steps.splice(0, 0, ensureStep(val));
         else
             this.steps.push(ensureStep(val));
+
 
         return this;
     }
@@ -248,8 +264,8 @@ export class BaseFlow implements types.FlowInterface {
 
         // Doing some checks
 
-        if (this.abstract)
-            throw new BaseError(`Unable to start '${this.short}' flow: The flow is abstract. Consider implement the flow with 'abstract': 'false'.`);
+        if (this.abstract === this.short)
+            throw new BaseError(`Unable to start '${this.short}' flow: The flow is abstract. Consider implement the flow with different 'short'.`);
 
 
         // Getting the data
@@ -299,7 +315,8 @@ export class FlowEngine {
     }
 
     public getFlowIndex(short: string): number|null {
-        return this.flows.findIndex(f => f?.short === short) ?? null;
+        const index = this.flows.findIndex(f => f?.short === short);
+        return index >= 0 ? index : null;
     }
 
     public getFlow(short: string): types.FlowInterface | null {
@@ -311,21 +328,21 @@ export class FlowEngine {
             return null;
     }
 
-    public setFlows(val: types.FlowInterface[]): this {
-        this.flows = val;
+    public setFlows(val: FlowOrConstructor[]): this {
+        this.flows = val.map(ensureFlow);
         return this;
     }
 
-    public addFlow(val: types.FlowInterface, _default?: boolean|null): this {
+    public addFlow(val: FlowOrConstructor, _default?: boolean|null): this {
         if (_default)
-            this.flows.splice(0, 0, val);
+            this.flows.splice(0, 0, ensureFlow(val));
         else
-            this.flows.push(val);
+            this.flows.push(ensureFlow(val));
 
         return this;
     }
 
-    public handle(val?: types.FlowInterface | string, context?: types.Obj | null): types.FlowControllerInterface {
+    public handle(val?: FlowOrConstructor | string, context?: types.Obj | null): types.FlowControllerInterface {
 
         // If the value is a valid types.FlowInterface
 
@@ -379,6 +396,13 @@ export function ensureStep(val: StepOrOptions): types.StepInterface {
 
 
     return new FlowStep().setShort(short).setHandler(handler);
+}
+
+export function ensureFlow(val: FlowOrConstructor): types.FlowInterface {
+    if (typeof val === 'function')
+        return new val();
+    else
+        return val;
 }
 
 export function createEngine(options: types.CreateEngineOptions): FlowEngine {
