@@ -129,6 +129,11 @@ export class FlowController implements types.FlowControllerInterface {
     public handle(): Promise<any> {
         return new Promise((resolve, reject) => {
 
+            // Doing some checks
+
+            if (this.isInProgress) throw new BaseError(`Unable to start flow: The flow is already in progress. This might be an internal issue: Please be sure to submit your feedback to the author.`);
+
+
             // Updating the data
 
             this.isInProgress = true;
@@ -148,6 +153,8 @@ export class FlowController implements types.FlowControllerInterface {
 
             // Setting the interval
 
+            let isStepInProgress: boolean = false;
+
             this.interval = setInterval(async () => {
 
                 // Doing some checks
@@ -156,6 +163,14 @@ export class FlowController implements types.FlowControllerInterface {
                     finish(this.stopVal);
                     return;
                 }
+
+                if (isStepInProgress)
+                    return;
+
+
+                // Updating the data
+
+                isStepInProgress = true;
 
 
                 // Getting the step
@@ -192,12 +207,17 @@ export class FlowController implements types.FlowControllerInterface {
                 }
 
 
-                // Navigating to the next step
+                // Setting the next step
 
                 if (isset(index))
                     this.stepNum = index;
                 else
                     this.stepNum++;
+
+
+                // Updating the data
+
+                isStepInProgress = false;
             }, this.tick);
         });
     }
